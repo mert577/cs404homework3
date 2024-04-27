@@ -41,11 +41,6 @@ class MoveType:
     LABEL_ISLAND = 1
     PLACE_BRIDGE = 2
 
-BOARD_SIZE = 3
-
-ISLANDS = [Island(0, 0, 1),Island(2,0,1),Island(1,1,0),Island(1,2,2),Island(2,2,0)]
-BRIDGES = []
-MOVES = []
 
 
 
@@ -55,6 +50,28 @@ def get_island(x, y, islands):
         if island.x == x and island.y == y:
             return island
     return None
+
+
+def read_islands_from_file(filename):
+    islands = []
+    with open(filename, 'r') as file:
+    #for every element in the file the x and y is the row and column of the island if the island is a number
+    #remove spaces and from the file and read the islands
+
+        non_empty_lines = [line for line in file if line.strip()]
+        for i, line in enumerate(non_empty_lines):
+            line_without_spaces = line.replace(" ","")
+            for j, char in enumerate(line_without_spaces):
+                if char.isdigit():
+                    islands.append(Island(j, i, int(char)))
+    return islands
+
+def print_islands(islands):
+    for island in islands:
+        print(island.x, island.y, island.max_bridge_count)
+
+print("Islands: ")
+print_islands(read_islands_from_file("levelConfig.txt"))
 
 def print_board(board):
     for i in range(BOARD_SIZE+2):
@@ -92,7 +109,7 @@ def can_place_brigdge(island1X,island1Y, island2X, island2Y, bridges,islands):
     if _island1 is None or _island2 is None:
          # print("ILLEGAL_MOVE: Cant place a bridge between two islands that dont exist")
           return -1
-        
+
 
     #check if the islands are not labeled
     if _island1.max_bridge_count == 0 or _island2.max_bridge_count == 0:
@@ -198,23 +215,6 @@ pygame.init()
 
 # Set up some constants
 
-WINDOW_WIDTH, WINDOW_HEIGHT = 650, 650
-
-CELL_SIZE = (WINDOW_WIDTH*.75) / (BOARD_SIZE-1)
-
-
-
-PADDING = WINDOW_HEIGHT*.125
-
-
-# Create the window
-window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-BLUE = (0,0,255)
 
 def draw_grid():
     for i in range(BOARD_SIZE-1):
@@ -309,10 +309,6 @@ def increase_bridge_count_at(x, y, islands):
         island.total_bridge_count += 1
 
 
-print_board(ISLANDS)
-
-
-possible_moves =  generate_all_non_illegal_moves(ISLANDS,BRIDGES)
 
 #This is the state transition function
 
@@ -352,7 +348,7 @@ def MakeMove(move, ISLANDSSTATE, BRIDGESSTATE,WHOSETURN):
     return NEW_ISLANDS, NEW_BRIDGES,NEWTURN
 
 
-
+#random move selection for debugging
 def PlayRandomMove():
 
     #generate all possible moves
@@ -365,15 +361,14 @@ def PlayRandomMove():
     random_move = random.choice(moves)
     return MakeMove(random_move,ISLANDS,BRIDGES,whoseTurn)
 
-
-
-
-
+# human player move selection using the console
 def get_player_move(islands, bridges):
     global whoseTurn
     genereatedMove = None
     while True:
+        print("move formats: label x y value or bridge x1 y1 x2 y2")
         move = input("Enter your move: ")
+
         move_parts = move.split()
         if len(move_parts) == 4 and move_parts[0] == "label":
             x, y, value = map(int, move_parts[1:])
@@ -393,6 +388,8 @@ def draw_score(score):
     text_rect = text.get_rect(center=(WINDOW_WIDTH/2, WINDOW_HEIGHT*.1))
     window.blit(text, text_rect)
 
+
+#--------- AI AGENT -----------------#
 def is_terminal_state(islands,bridges):
     if len(generate_all_non_illegal_moves(islands,bridges)) == 0:
         return True
@@ -489,6 +486,40 @@ whoseTurn= 1
 def printBridges(bridges):
     for b in bridges:
         print("Bridge: ",b.island1.x,b.island1.y,b.island2.x,b.island2.y,b.whoPlaced,b.scoreGained)
+
+
+#game initialization
+
+
+BOARD_SIZE = 3
+
+ISLANDS = [Island(0, 0, 1),Island(2,0,1),Island(1,1,0),Island(1,2,2),Island(2,2,0)]
+BRIDGES = []
+MOVES = []
+
+print_board(ISLANDS)
+possible_moves =  generate_all_non_illegal_moves(ISLANDS,BRIDGES)
+
+
+#for game rendering
+WINDOW_WIDTH, WINDOW_HEIGHT = 650, 650
+
+CELL_SIZE = (WINDOW_WIDTH*.75) / (BOARD_SIZE-1)
+
+PADDING = WINDOW_HEIGHT*.125
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+BLUE = (0,0,255)
+
+
+
+# Create the window
+window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+
+
 # Game loop
 running = True
 while running:
