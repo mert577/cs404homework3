@@ -122,12 +122,11 @@ def can_place_brigdge(island1X,island1Y, island2X, island2Y, bridges,islands):
     for bridge in bridges:
         currentIsland1 = get_island(bridge.island1.x, bridge.island1.y,islands)
         currentIsland2 = get_island(bridge.island2.x, bridge.island2.y,islands)
-        if currentIsland1 == _island1 and currentIsland1 == _island2:
+        if (currentIsland1.x == _island1.x and currentIsland1.y == _island1.y and currentIsland2.x == _island2.x and currentIsland2.y == _island2.y) or (currentIsland1.x == _island2.x and currentIsland1.y == _island2.y and currentIsland2.x == _island1.x and currentIsland2.y == _island1.y):
             count += 1
-        if currentIsland1 == _island2 and currentIsland2 == _island1:
-            count += 1
+
     
-    if count > 2:
+    if count >= 2:
          # print("ILLEGAL_MOVE: Cant place more than 2 bridges between two islands")
           return -1
     
@@ -493,7 +492,7 @@ def printBridges(bridges):
 
 BOARD_SIZE = 3
 
-ISLANDS = [Island(0, 0, 1),Island(2,0,1),Island(1,1,0),Island(1,2,2),Island(2,2,0)]
+ISLANDS = read_islands_from_file("levelConfig.txt")
 BRIDGES = []
 MOVES = []
 
