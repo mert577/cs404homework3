@@ -2,8 +2,6 @@ import random
 import copy
 
 
-
-
 class Island:
     def __init__(self, x, y, max_bridge_count):
         self.x = x
@@ -73,26 +71,62 @@ def print_islands(islands):
 print("Islands: ")
 print_islands(read_islands_from_file("levelConfig.txt"))
 
-def print_board(board):
-    for i in range(BOARD_SIZE+2):
-        for j in range(BOARD_SIZE+2):
-            #if its an odd number its the place for islands so check if there is an island
-            if i % 2 == 0 and j % 2 == 0:
-                island = get_island(i//2, j//2,board)
-                if island is not None:
-                    print(island.max_bridge_count, end=" ")
-                else:
-                    print("+", end=" ")
-            else:
-                if i== j or BOARD_SIZE+1-i == j:
-                    print(" ", end=" ")
-                else:
-                    print("-", end=" ")
-            #the bridges cannot be placed on diagonals of the matrix so print a " " instead
-            
-        print()
-    print()
+
         
+
+
+def fromStateToBoard(islands, bridges, boardSize):
+    #create a nxn matrix with the islands and bridges
+    board = [["." for i in range(boardSize)] for j in range(boardSize)]
+    #place the islands on the board
+    for island in islands:
+        board[island.y][island.x] = str(island.max_bridge_count)
+
+    #place bridges on the board with a horizontal or vertical line if two bridges use = and X
+    for bridge in bridges:
+        if bridge.is_horizontal:
+            #make the cells between the islands - 
+            #check if there exists two bridges between the same islands
+            count = 0
+            for b in bridges:
+                if (b.island1 == bridge.island1 and b.island2 == bridge.island2) or (b.island1 == bridge.island2 and b.island2 == bridge.island1):
+                    count += 1
+            
+            placedSymbol = "-"
+            if count == 2:
+                placedSymbol = "="
+
+
+            if bridge.island1.x < bridge.island2.x:
+                for i in range(bridge.island1.x+1, bridge.island2.x):
+                    board[bridge.island1.y][i] = placedSymbol
+            else:
+                for i in range(bridge.island2.x+1, bridge.island1.x):
+                    board[bridge.island1.y][i] = placedSymbol
+        else:
+            #make the cells between the islands |
+            #check if there exists two bridges between the same islands
+            count = 0
+            for b in bridges:
+                if (b.island1 == bridge.island1 and b.island2 == bridge.island2) or (b.island1 == bridge.island2 and b.island2 == bridge.island1):
+                    count += 1
+            
+            placedSymbol = "|"
+            if count == 2:
+                placedSymbol = "X"
+
+            if bridge.island1.y < bridge.island2.y:
+                for i in range(bridge.island1.y+1, bridge.island2.y):
+                    board[i][bridge.island1.x] = placedSymbol
+            else:
+                for i in range(bridge.island2.y+1, bridge.island1.y):
+                    board[i][bridge.island1.x] = placedSymbol
+
+    #print the board
+    for i in range(boardSize):
+        for j in range(boardSize):
+            print(board[i][j],end="")
+        print()
 
 
 
@@ -139,6 +173,18 @@ def can_place_brigdge(island1X,island1Y, island2X, island2Y, bridges,islands):
     if _island1.total_bridge_count == _island1.max_bridge_count or _island2.total_bridge_count == _island2.max_bridge_count:
       #  print("ILLEGAL_MOVE: Cant place a bridge between two islands that have reached their max bridge count")
         return -1
+    
+
+
+
+    #check if the bridge crosses another bridge
+    for bridge in bridges:
+        #check if the bridge is not the same as the bridge that is being placed
+        if (bridge.island1.x == _island1.x and bridge.island1.y == _island1.y and bridge.island2.x == _island2.x and bridge.island2.y == _island2.y) or (bridge.island1.x == _island2.x and bridge.island1.y == _island2.y and bridge.island2.x == _island1.x and bridge.island2.y == _island1.y):
+            continue
+        if do_intersect((_island1.x, _island1.y), (_island2.x, _island2.y), (bridge.island1.x, bridge.island1.y), (bridge.island2.x, bridge.island2.y)):
+          #  print("ILLEGAL_MOVE: Cant place a bridge that crosses another bridge")
+            return -1
 
     #check if the islands are on the same row or column and there is no island in between
     if _island1.x == _island2.x:
@@ -194,8 +240,10 @@ def generate_all_non_illegal_moves(islands, bridges):
         if island.max_bridge_count == 0:
             moves.append(Move(MoveType.LABEL_ISLAND, labeled_island=island, label=3))
             moves.append(Move(MoveType.LABEL_ISLAND, labeled_island=island, label=4))
-    for island1 in islands:
-        for island2 in islands:
+    for i in range(len(islands)):
+        for j in range(i+1, len(islands)):
+            island1 = islands[i]
+            island2 = islands[j]
             possibleMove = Move(MoveType.PLACE_BRIDGE, island1=island1, island2=island2)
 
             #set if horizontal or vertical
@@ -205,6 +253,82 @@ def generate_all_non_illegal_moves(islands, bridges):
                 moves.append(possibleMove)
 
     return moves
+
+def printBoard(islands,bridges,boardSize):
+     #create a nxn matrix with the islands and bridges
+     #where n is 2*boardsize-1
+    board = [["." for i in range(2*boardSize-1)] for j in range(2*boardSize-1)]
+
+    #place the islands on the board fix the x and y coordinates by dividing by 2
+    for island in islands:
+        board[island.y*2][island.x*2] = str(island.max_bridge_count)
+    
+    #place the bridges on the board
+
+    for bridge in bridges:
+        #if the bridge is horizontal
+        if not bridge.is_horizontal:
+            placedSymbol = "-"
+            #if there are two bridges between the same islands change the symbol
+            count = 0
+            for b in bridges:
+                if (b.island1 == bridge.island1 and b.island2 == bridge.island2) or (b.island1 == bridge.island2 and b.island2 == bridge.island1):
+                    count += 1
+            
+            if count == 2:
+                placedSymbol = "="
+
+            if bridge.island1.x < bridge.island2.x:
+                for i in range(bridge.island1.x*2+1, bridge.island2.x*2):
+                    board[bridge.island1.y*2][i] = placedSymbol
+            else:
+                for i in range(bridge.island2.x*2+1, bridge.island1.x*2):
+                    board[bridge.island1.y*2][i] = placedSymbol
+            
+        else:
+            print("Vertical bridge")
+            placedSymbol = "|"
+            count = 0
+            for b in bridges:
+                if (b.island1 == bridge.island1 and b.island2 == bridge.island2) or (b.island1 == bridge.island2 and b.island2 == bridge.island1):
+                    count += 1
+            
+            if count == 2:
+                placedSymbol = "X"
+
+            if bridge.island1.y < bridge.island2.y:
+               
+                for i in range(bridge.island1.y*2+1, bridge.island2.y*2):
+                    board[i][bridge.island1.x*2] = placedSymbol
+            else:
+                for i in range(bridge.island2.y*2+1, bridge.island1.y*2):
+                    board[i][bridge.island1.x*2] = placedSymbol
+
+
+    #print the board
+    for i in range(2*boardSize-1):
+        for j in range(2*boardSize-1):
+            print(board[i][j],end="")
+        print()
+
+def orientation(p, q, r):
+    val = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
+    if val == 0:
+        return 0  # colinear
+    return 1 if val > 0 else 2  # clock or counterclock wise
+
+def do_intersect(p1, p2, q1, q2):
+    o1 = orientation(p1, p2, q1)
+    o2 = orientation(p1, p2, q2)
+    o3 = orientation(q1, q2, p1)
+    o4 = orientation(q1, q2, p2)
+
+    # General case
+    if o1 != o2 and o3 != o4:
+        return True
+
+    return False  # Doesn't fall in any of the above cases
+
 
 
 import pygame
@@ -344,6 +468,7 @@ def MakeMove(move, ISLANDSSTATE, BRIDGESSTATE,WHOSETURN):
 
     
     NEWTURN = WHOSETURN* -1
+    
     return NEW_ISLANDS, NEW_BRIDGES,NEWTURN
 
 
@@ -416,7 +541,7 @@ def guess_move_score(move):
 
 
 def minimax(islands, bridges, depth, alpha, beta, maximizingPlayer):
-    if depth == 0 or is_terminal_state(islands, bridges):  # You need to implement the game_over function
+    if depth == 0 or is_terminal_state(islands, bridges):
        # print("Leaf node reached with the score: "+str(Evaluate_Board(bridges)))
         return Evaluate_Board(bridges)
 
@@ -496,7 +621,6 @@ ISLANDS = read_islands_from_file("levelConfig.txt")
 BRIDGES = []
 MOVES = []
 
-print_board(ISLANDS)
 possible_moves =  generate_all_non_illegal_moves(ISLANDS,BRIDGES)
 
 
@@ -534,7 +658,7 @@ while running:
                     else:
                         print("BLUE WON")
 
-                elif whoseTurn== -1:
+                elif whoseTurn == 1:
                     #human turn
                     print_possible_moves(generate_all_non_illegal_moves(ISLANDS,BRIDGES))
                     move = get_player_move(ISLANDS,BRIDGES)
@@ -542,7 +666,9 @@ while running:
                     ISLANDS = newIsles  
                     BRIDGES = newBridges
                     whoseTurn = newTurn
-                    printBridges(BRIDGES)
+                  #  fromStateToBoard(ISLANDS,BRIDGES,BOARD_SIZE)
+
+                    printBoard(ISLANDS,BRIDGES,BOARD_SIZE)
 
                 else:
                    
@@ -550,6 +676,7 @@ while running:
                         print("No possible moves")
                     else:
                         move = ChooseBestCurrentMoveWithMinimax(ISLANDS,BRIDGES,whoseTurn)
+                        print()
                         print("Move type:" + str(move.move_type))
                         if move.move_type == MoveType.LABEL_ISLAND:
                             print("Label Island: ", move.labeled_island.x, move.labeled_island.y, move.label)
@@ -560,7 +687,8 @@ while running:
                         ISLANDS = newIsles  
                         BRIDGES = newBridges
                         whoseTurn = newTurn
-                        printBridges(BRIDGES)
+                     #   fromStateToBoard(ISLANDS,BRIDGES,BOARD_SIZE)
+                        printBoard(ISLANDS,BRIDGES,BOARD_SIZE)
         
 
 
